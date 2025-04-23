@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Globe - Coriolis Effect</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="dark-theme">
+    <div id="globe-container"></div>
+
+    <div id="controls">
+        <button id="toggleRotation">Toggle Rotation (ON)</button>
+        <div>
+            <label for="speedSlider">Visual Rotation Speed:</label>
+            <input type="range" id="speedSlider" min="0" max="100" value="20">
+            <span id="speedValue">0.002</span>
+             <small>Adjusts visualization speed only.</small>
+        </div>
+        <button id="toggleTheme">Toggle Theme (Dark)</button>
+        <hr>
+        <div class="vector-controls">
+            <p>Double-click globe to set point.</p>
+            <div>
+                <label for="v_ns">Velocity North(+)/South(-):</label>
+                <input type="number" id="v_ns" value="10" step="0.1"> </div>
+            <div>
+                <label for="v_ew">Velocity East(+)/West(-):</label>
+                <input type="number" id="v_ew" value="0" step="0.1">
+            </div>
+            <small>Relative velocity tangential to surface (m/s).</small>
+            <div class="legend">
+                <div><span style="color: red;">■ Velocity</span></div>
+                <div><span style="color: lime;">■ Ω (Rotation)</span></div>
+                <div><span style="color: blue;">■ Coriolis</span></div>
+            </div>
+             <div id="coriolisAccelerationDisplay"> <h3>Coriolis Acceleration:</h3>
+                <p><span id="coriolisAccelerationMagnitude">0.00</span> \(m/s^2\)</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+/* --- Theme Variables --- */
+:root {
+    /* Light Theme */
+    --bg-color: #f4f4f4;
+    --text-color: #333;
+    --text-muted-color: #555;
+    --panel-bg-color: #fff;
+    --panel-border-color: #ccc;
+    --panel-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    --canvas-bg-color: #e0e0e0;
+    --input-bg-color: #fff;
+    --input-border-color: #ccc;
+    --button-start-bg: #5cb85c;
+    --button-start-hover-bg: #4cae4c;
+    --button-pause-bg: #f0ad4e;
+    --button-pause-hover-bg: #ec971f;
+    --button-theme-bg: #6c757d;
+    --button-theme-hover-bg: #5a6268;
+    --button-text-color: #fff;
+    --data-label-bg: #f9f9f9;
+    --data-label-text: #000;
+
+    /* Body & Chart Colors (Light) */
+    --color-body-a: rgb(220, 53, 69);    /* Bootstrap Danger Red */
+    --color-body-b: rgb(0, 123, 255);   /* Bootstrap Primary Blue */
+    --color-line-p1: var(--color-body-a);
+    --color-line-p2: var(--color-body-b);
+    --color-line-ke1: var(--color-body-a); /* Match color of body A */
+    --color-line-ke2: var(--color-body-b); /* Match color of body B */
+    --color-total-mom: rgb(23, 162, 184); /* Bootstrap Info Teal */
+    --color-total-ke: rgb(40, 167, 69);  /* Bootstrap Success Green */
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --chart-tick-color: #666;
+    --chart-title-color: var(--text-muted-color);
+
+    /* Reset Button Color - Light Theme */
+    --button-reset-bg: #cccccc; /* Light gray */
+    --button-reset-hover-bg: #bbbbbb; /* Slightly darker gray on hover */
+    --button-reset-text-color: #333; /* Dark text for contrast */
+}
+
+body.dark-theme {
+    /* Dark Theme */
+    --bg-color: #212529;
+    --text-color: #dee2e6;
+    --text-muted-color: #adb5bd;
+    --panel-bg-color: #343a40;
+    --panel-border-color: #495057;
+    --panel-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    --canvas-bg-color: #495057;
+    --input-bg-color: #495057;
+    --input-border-color: #6c757d;
+    --button-start-bg: #28a745;
+    --button-start-hover-bg: #218838;
+    --button-pause-bg: #ffc107;
+    --button-pause-hover-bg: #e0a800;
+    --button-theme-bg: #adb5bd;
+    --button-theme-hover-bg: #9fa6ae;
+    --button-text-color: #212529;
+    --data-label-bg: #495057;
+    --data-label-text: #dee2e6;
+
+    /* Body & Chart Colors (Dark) */
+    --color-body-a: rgb(255, 118, 132); /* Lighter Red */
+    --color-body-b: rgb(86, 157, 255);  /* Lighter Blue */
+    --color-line-p1: var(--color-body-a);
+    --color-line-p2: var(--color-body-b);
+    --color-line-ke1: var(--color-body-a); /* Match color of body A */
+    --color-line-ke2: var(--color-body-b); /* Match color of body B */
+    --color-total-mom: rgb(99, 206, 224); /* Lighter Teal */
+    --color-total-ke: rgb(100, 207, 129); /* Lighter Green */
+    --chart-grid-color: rgba(255, 255, 255, 0.15);
+    --chart-tick-color: #adb5bd;
+    --chart-title-color: var(--text-muted-color);
+
+     /* Reset Button Color - Dark Theme */
+    --button-reset-bg: #6c757d; /* Bootstrap Secondary Gray */
+    --button-reset-hover-bg: #5a6268; /* Slightly darker gray on hover */
+    --button-reset-text-color: #dee2e6; /* Light text */
+}
+
+/* --- General Styles --- */
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2 {
+    text-align: center;
+    color: var(--text-color);
+    margin-bottom: 25px;
+}
+h3 {
+    margin-bottom: 10px;
+    color: var(--text-muted-color);
+}
+
+/* --- Layout --- */
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px; /* Increased gap */
+    max-width: 1900px; /* Wider layout */
+    margin: auto;
+    align-items: flex-start;
+}
+
+/* --- Panels --- */
+.controls, .simulation, .graphs {
+    background-color: var(--panel-bg-color);
+    padding: 25px; /* Increased padding */
+    border-radius: 8px;
+    box-shadow: var(--panel-shadow);
+    border: 1px solid var(--panel-border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Flex sizing: Make graphs larger */
+.controls {
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+}
+
+.simulation {
+    flex: 2; /* Reduced flex for simulation */
+    min-width: 450px;
+    display: flex; /* Set simulation to flex */
+    flex-direction: column; /* Stack children vertically */
+    gap: 15px; /* Add space between canvas and data display */
+}
+
+.graphs {
+    flex: 3; /* Increased flex for graphs */
+    min-width: 500px;
+}
+
+/* --- Simulation Area --- */
+#simulationCanvasContainer {
+    width: 100%;
+    min-height: 120px; /* Slightly larger min height */
+    height: 18vh;
+    background-color: var(--canvas-bg-color);
+    border: 1px solid var(--panel-border-color);
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* --- Graphs Area --- */
+.graphs {
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Increased gap */
+}
+
+.chart-container {
+    position: relative;
+    height: 300px; /* Increased graph height */
+    width: 100%;
+}
+.chart-title {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: var(--chart-title-color);
+    transition: color 0.3s ease;
+}
+
+
+/* --- Controls Styling --- */
+.controls div {
+    margin-bottom: 18px; /* Increased spacing */
+}
+
+.controls label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--text-muted-color);
+    transition: color 0.3s ease;
+}
+
+.controls input[type="number"],
+.controls input[type="range"] {
+    width: 95%;
+    padding: 9px; /* Increased padding */
+    margin-bottom: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--input-border-color);
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.controls input[type="range"] {
+     vertical-align: middle;
+     padding: 0;
+     width: calc(95% - 50px);
+     display: inline-block;
+}
+.controls span#timeScaleValue {
+     display: inline-block;
+     min-width: 40px;
+     text-align: right;
+     margin-left: 5px;
+     vertical-align: middle;
+     font-weight: bold;
+}
+
+.controls div label[for="elastic"],
+.controls div label[for="inelastic"] {
+    display: inline-block;
+    font-weight: normal;
+    margin-right: 5px;
+    margin-left: 2px;
+    margin-bottom: 0;
+    vertical-align: middle;
+    color: var(--text-color); /* Ensure label text matches theme */
+}
+.controls input[type="radio"] {
+    width: auto;
+    margin-right: 15px;
+    vertical-align: middle;
+    transform: scale(1.1);
+    accent-color: var(--color-body-b); /* Theme the radio check */
+}
+
+/* --- Buttons --- */
+.controls button {
+    padding: 10px 15px;
+    margin-right: 10px;
+    margin-top: 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    font-size: 1em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: var(--button-text-color);
+}
+#startButton { background-color: var(--button-start-bg); }
+#startButton:hover { background-color: var(--button-start-hover-bg); }
+#pauseButton { background-color: var(--button-pause-bg); }
+#pauseButton:hover { background-color: var(--button-pause-hover-bg); }
+#themeToggle { background-color: var(--button-theme-bg); }
+#themeToggle:hover { background-color: var(--button-theme-hover-bg); }
+
+/* Specific styling for the Reset button */
+#resetButton {
+    background-color: var(--button-reset-bg);
+    color: var(--button-reset-text-color);
+}
+#resetButton:hover {
+     background-color: var(--button-reset-hover-bg);
+}
+
+
+/* --- Data Display --- */
+/* Moved to simulation box, adjust styling */
+#dataDisplay {
+    margin-top: 0; /* Remove top margin as it's in a flex column with gap */
+    padding-top: 0; /* Remove top padding */
+    border-top: none; /* Remove border top */
+    padding: 15px; /* Add padding inside the data display */
+    background-color: var(--data-label-bg); /* Use a background color */
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+#dataDisplay h3 {
+     margin-top: 0;
+}
+#dataDisplay p {
+    margin: 6px 0;
+    font-size: 0.95em;
+    color: var(--data-label-text); /* Use appropriate text color */
+    transition: color 0.3s ease;
+}
+#dataDisplay span {
+    font-weight: bold;
+    min-width: 70px;
+    display: inline-block;
+    text-align: right;
+    margin-left: 8px;
+    color: var(--data-label-text);
+    background-color: var(--data-label-bg); /* Keep span background for highlighting */
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}

@@ -1,0 +1,157 @@
+/* Basic Reset */
+body {
+    margin: 0;
+    overflow: hidden; /* Prevent scrollbars */
+    font-family: sans-serif;
+    /* Default Light Theme Variables */
+    --bg-color: #f0f0f0;
+    --text-color: #333;
+    --ui-bg-color: rgba(255, 255, 255, 0.8);
+    --ui-border-color: #ccc;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Apply Theme Variables */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Dark Theme */
+body.dark-theme {
+    --bg-color: #222;
+    --text-color: #f0f0f0;
+    --ui-bg-color: rgba(51, 51, 51, 0.85); /* Slightly more opaque UI */
+    --ui-border-color: #555;
+}
+
+#globe-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: grab; /* Indicate draggable */
+}
+#globe-container:active {
+    cursor: grabbing;
+}
+
+
+canvas {
+    display: block; /* Prevent extra space below canvas */
+}
+
+#controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 15px;
+    background-color: var(--ui-bg-color);
+    border: 1px solid var(--ui-border-color);
+    border-radius: 5px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Spacing between control elements */
+    color: var(--text-color); /* Inherit text color from body */
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    max-width: 250px; /* Prevent UI from getting too wide */
+}
+
+#controls label {
+    margin-right: 5px;
+    display: inline-block; /* Allow spacing */
+}
+
+#controls button {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: 1px solid var(--ui-border-color);
+    background-color: var(--bg-color); /* Match background slightly */
+    color: var(--text-color);
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+#controls button:hover {
+    opacity: 0.9;
+}
+
+#controls input[type="range"] {
+    vertical-align: middle; /* Align slider nicely with label */
+    cursor: pointer;
+    max-width: 100px; /* Limit slider width */
+}
+#controls input[type="number"] {
+    width: 60px; /* Set fixed width for number inputs */
+    padding: 4px;
+    border: 1px solid var(--ui-border-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 3px;
+}
+
+
+#speedValue {
+    display: inline-block;
+    min-width: 40px; /* Ensure space for the value */
+    text-align: right;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--ui-border-color);
+    margin: 10px 0;
+}
+
+.vector-controls p {
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.vector-controls small {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+.vector-controls div {
+    margin-bottom: 5px; /* Spacing for input rows */
+}
+
+/* Legend Styling Updated */
+.legend {
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+.legend div { /* Style the div wrappers */
+    margin-bottom: 3px; /* Add space between legend rows */
+}
+.legend span {
+    /* margin-right removed */
+    font-weight: bold;
+}
+
+/* Styling for the Coriolis Acceleration display */
+#coriolisAccelerationDisplay { /* Changed ID */
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ui-border-color);
+}
+
+#coriolisAccelerationDisplay h3 { /* Changed ID */
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1em;
+}
+
+#coriolisAccelerationDisplay p { /* Changed ID */
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+#coriolisAccelerationMagnitude {
+     /* No specific styling needed for the span itself unless you want it different */
+}
