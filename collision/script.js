@@ -135,13 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorB = getCssVariable('--color-body-b');
 
         // Create Bodies (Rectangles for squares)
-        boxA = Bodies.rectangle(canvasWidth * 0.25, bodyY, boxSize, boxSize, { label: "boxA", restitution: restitutionVal, friction: 0, frictionAir: 0, frictionStatic: 0, inertia: Infinity, inverseInertia: 0, mass: m1, render: { fillStyle: colorA } });
+        // Set isStatic: false for dynamic bodies
+        boxA = Bodies.rectangle(canvasWidth * 0.25, bodyY, boxSize, boxSize, { label: "boxA", restitution: restitutionVal, friction: 0, frictionAir: 0, frictionStatic: 0, inertia: Infinity, inverseInertia: 0, mass: m1, render: { fillStyle: colorA }, isStatic: false });
         Body.setVelocity(boxA, { x: v1, y: 0 }); // Set initial velocity state
 
-        boxB = Bodies.rectangle(canvasWidth * 0.75, bodyY, boxSize, boxSize, { label: "boxB", restitution: restitutionVal, friction: 0, frictionAir: 0, frictionStatic: 0, inertia: Infinity, inverseInertia: 0, mass: m2, render: { fillStyle: colorB } });
+        boxB = Bodies.rectangle(canvasWidth * 0.75, bodyY, boxSize, boxSize, { label: "boxB", restitution: restitutionVal, friction: 0, frictionAir: 0, frictionStatic: 0, inertia: Infinity, inverseInertia: 0, mass: m2, render: { fillStyle: colorB }, isStatic: false });
         Body.setVelocity(boxB, { x: v2, y: 0 }); // Set initial velocity state
 
-        // Create the ground (flat plane)
+        // Create the ground (flat plane) - Keep this static
         ground = Bodies.rectangle(canvasWidth / 2, groundY, canvasWidth, groundHeight, {
             isStatic: true, // Make it static so it doesn't move
             render: {
@@ -172,15 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Events.on(engine, 'beforeUpdate', (event) => {
             if (!engine || isPaused) return; // Skip updates if paused
+            // Calculate simulation time based on engine timestamp
             simulationTime = (engine.timing.timestamp / 1000);
-            // Keep bodies on the ground plane and prevent rotation
-             const groundHeight = 20; // Match ground height
-             const bodySize = 40; // Match body size
-             const groundY = render ? render.options.height - groundHeight / 2 : 100 - groundHeight / 2;
-             const bodyY = groundY - groundHeight / 2 - bodySize / 2;
 
-            if (boxA) { Body.setPosition(boxA, { x: boxA.position.x, y: bodyY }); Body.setVelocity(boxA, { x: boxA.velocity.x, y: 0 }); Body.setAngularVelocity(boxA, 0); Body.setAngle(boxA, 0); }
-            if (boxB) { Body.setPosition(boxB, { x: boxB.position.x, y: bodyY }); Body.setVelocity(boxB, { x: boxB.velocity.x, y: 0 }); Body.setAngularVelocity(boxB, 0); Body.setAngle(boxB, 0); }
+            // *** REMOVED: Manual position, velocity, and angle correction. ***
+            // *** Matter.js physics engine should handle these based on static ground and collision response. ***
+            // if (boxA) { Body.setPosition(boxA, { x: boxA.position.x, y: bodyY }); Body.setVelocity(boxA, { x: boxA.velocity.x, y: 0 }); Body.setAngularVelocity(boxA, 0); Body.setAngle(boxA, 0); }
+            // if (boxB) { Body.setPosition(boxB, { x: boxB.position.x, y: bodyY }); Body.setVelocity(boxB, { x: boxB.velocity.x, y: 0 }); Body.setAngularVelocity(boxB, 0); Body.setAngle(boxB, 0); }
+
+            // Record data for charts and display
             calculateAndRecordData(simulationTime);
         });
 
@@ -188,27 +189,76 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isPaused || pendingInelasticCollision) return;
             const pairs = event.pairs;
             for (let i = 0; i < pairs.length; i++) {
-                 // ... (inelastic collision flagging logic remains the same) ...
                  const pair = pairs[i];
                  // Ensure the collision is between boxA and boxB, and not with the ground
-                 const isTargetCollision = boxA && boxB && ((pair.bodyA === boxA && pair.bodyB === boxB) || (pair.bodyA === boxB && pair.bodyB === boxA));
+                 // Also ensure both bodies still exist before processing
+                 const isTargetCollision = boxA && boxB && ((pair.bodyA === boxA && pair.bodyB === boxB) || (pair.bodyA === bodyB && pair.bodyB === boxA));
+
                  if (isTargetCollision && collisionType === 'inelastic') {
-                     const bodyA = boxA; const bodyB = bodyB; const vAx = bodyA.velocity.x; const vBx = bodyB.velocity.x; const mA = bodyA.mass; const mB = bodyB.mass;
-                     if (isNaN(mA) || isNaN(mB) || (mA + mB) === 0) continue;
-                     const finalVx = (mA * vAx + mB * vBx) / (mA + mB); const totalMass = mA + mB;
-                     pendingInelasticCollision = { bodyToKeep: bodyA, bodyToRemove: bodyB, finalVx, totalMass }; break;
+                     // Get the bodies involved in the collision pair
+                     const bodyA = pair.bodyA;
+                     const bodyB = pair.bodyB;
+
+                     // Ensure we are using the correct boxA/boxB references in case one was removed
+                     const currentBoxA = World.get(world, boxA.id, 'body');
+                     const currentBoxB = World.get(world, boxB.id, 'body');
+
+                     // Check if the colliding bodies are the current boxA and boxB
+                     const isCurrentCollision = (currentBoxA === bodyA && currentBoxB === bodyB) || (currentBoxA === bodyB && currentBoxB === bodyA);
+
+                     if (isCurrentCollision) {
+                         const vAx = bodyA.velocity.x;
+                         const vBx = bodyB.velocity.x;
+                         const mA = bodyA.mass;
+                         const mB = bodyB.mass;
+
+                         // Prevent division by zero or invalid mass
+                         if (isNaN(mA) || isNaN(mB) || (mA + mB) === 0) {
+                             console.warn("Invalid mass detected during inelastic collision calculation.");
+                             continue; // Skip this collision
+                         }
+
+                         // Calculate final velocity using momentum conservation
+                         const finalVx = (mA * vAx + mB * vBx) / (mA + mB);
+                         const totalMass = mA + mB;
+
+                         // Flag the collision for processing in afterUpdate
+                         // Determine which body to keep (arbitrarily keep bodyA from the pair)
+                         pendingInelasticCollision = { bodyToKeep: bodyA, bodyToRemove: bodyB, finalVx, totalMass };
+
+                         // Stop processing further pairs for this collision event
+                         break;
+                     }
                  }
             }
         });
 
          Events.on(engine, 'afterUpdate', (event) => {
-             // ... (inelastic collision processing logic remains the same) ...
+             // Process pending inelastic collision after the engine update
              if (pendingInelasticCollision) {
                  const { bodyToKeep, bodyToRemove, finalVx, totalMass } = pendingInelasticCollision;
-                 if (World.get(world, bodyToKeep.id, 'body') && World.get(world, bodyToRemove.id, 'body')) {
-                     World.remove(world, bodyToRemove); Body.setMass(bodyToKeep, totalMass); Body.setVelocity(bodyToKeep, { x: finalVx, y: 0 });
-                     if (bodyToRemove === boxA) boxA = null; if (bodyToRemove === boxB) boxB = null;
-                 } else { console.warn("Skipping inelastic process: body missing"); }
+
+                 // Ensure both bodies still exist in the world before attempting to modify
+                 const bodyToKeepExists = World.get(world, bodyToKeep.id, 'body');
+                 const bodyToRemoveExists = World.get(world, bodyToRemove.id, 'body');
+
+                 if (bodyToKeepExists && bodyToRemoveExists) {
+                     // Remove the body that is being absorbed
+                     World.remove(world, bodyToRemove);
+
+                     // Update the mass and velocity of the remaining body
+                     Body.setMass(bodyToKeep, totalMass);
+                     Body.setVelocity(bodyToKeep, { x: finalVx, y: 0 });
+
+                     // Update the global boxA/boxB references if one was removed
+                     if (bodyToRemove === boxA) boxA = null;
+                     if (bodyToRemove === boxB) boxB = null;
+
+                 } else {
+                     console.warn("Skipping inelastic process: one or both bodies missing from world.");
+                 }
+
+                 // Clear the pending collision flag
                  pendingInelasticCollision = null;
              }
          });
@@ -217,34 +267,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Physics Calculations & Data Recording ---
     function calculateAndRecordData(time) {
-        const numericTime = parseFloat(time); if (isNaN(numericTime)) return;
+        const numericTime = parseFloat(time);
+        if (isNaN(numericTime)) return;
+
         let p1 = 0, p2 = 0, ke1 = 0, ke2 = 0;
+
         // Calculate even if paused for the initial state T=0
-        if (boxA) { const v1 = boxA.velocity.x, m1 = boxA.mass; p1 = m1 * v1; ke1 = 0.5 * m1 * v1 * v1; }
-        if (boxB) { const v2 = boxB.velocity.x, m2 = boxB.mass; p2 = m2 * v2; ke2 = 0.5 * m2 * v2 * v2; }
-        const totalMomentum = p1 + p2; const totalEnergy = ke1 + ke2;
+        if (boxA) {
+            const v1 = boxA.velocity.x;
+            const m1 = boxA.mass;
+            p1 = m1 * v1;
+            ke1 = 0.5 * m1 * v1 * v1;
+        }
+        if (boxB) {
+            const v2 = boxB.velocity.x;
+            const m2 = boxB.mass;
+            p2 = m2 * v2;
+            ke2 = 0.5 * m2 * v2 * v2;
+        }
+
+        const totalMomentum = p1 + p2;
+        const totalEnergy = ke1 + ke2;
+
+        // Update the live data display
         updateDataDisplay(numericTime, totalMomentum, totalEnergy);
 
         // Only add data if it's different from the last point or if arrays are empty (for T=0)
+        // This prevents adding duplicate data points if the engine updates rapidly but time doesn't change significantly
         const lastTime = chartData.labels.length > 0 ? parseFloat(chartData.labels[chartData.labels.length - 1]) : -1;
+
+        // Add data point if time has advanced or if it's the very first data point
         if (chartData.labels.length === 0 || numericTime > lastTime) {
-            chartData.labels.push(numericTime.toFixed(2));
-            chartData.momentum.p1.push(p1); chartData.momentum.p2.push(p2); chartData.momentum.pTotal.push(totalMomentum);
-            chartData.energy.ke1.push(ke1); chartData.energy.ke2.push(ke2); chartData.energy.keTotal.push(totalEnergy);
-            updateCharts(numericTime); // Update charts only when adding data
+            chartData.labels.push(numericTime.toFixed(2)); // Store time as string for chart labels
+            chartData.momentum.p1.push(p1);
+            chartData.momentum.p2.push(p2);
+            chartData.momentum.pTotal.push(totalMomentum);
+            chartData.energy.ke1.push(ke1);
+            chartData.energy.ke2.push(ke2);
+            chartData.energy.keTotal.push(totalEnergy);
+
+            // Update charts only when new data is added
+            updateCharts(numericTime);
         }
     }
 
     // --- Update Live Data Display ---
     function updateDataDisplay(time, momentum = 0, energy = 0) {
-         timeDisplay.textContent = time.toFixed(2); momentumDisplay.textContent = momentum.toFixed(2); energyDisplay.textContent = energy.toFixed(2);
+         timeDisplay.textContent = time.toFixed(2);
+         momentumDisplay.textContent = momentum.toFixed(2);
+         energyDisplay.textContent = energy.toFixed(2);
     }
 
     // --- Chart.js Setup ---
     function setupCharts() {
+        // Destroy existing charts if they exist
         if (momentumChart) momentumChart.destroy();
         if (energyChart) energyChart.destroy();
 
+        // Get theme-dependent colors
         const colorP1 = getCssVariable('--color-line-p1');
         const colorP2 = getCssVariable('--color-line-p2');
         const colorPTotal = getCssVariable('--color-total-mom');
@@ -254,60 +334,132 @@ document.addEventListener('DOMContentLoaded', () => {
         const gridColor = getCssVariable('--chart-grid-color');
         const tickColor = getCssVariable('--chart-tick-color');
         const titleColor = getCssVariable('--chart-title-color');
-        const legendColor = tickColor;
+        const legendColor = tickColor; // Use tick color for legend text
         const baseFontSize = 12;
         const largeFontSize = 14;
 
-        // Increased line thickness
+        // Define line thickness for charts
         const lineThickness = 2.5;
-        const totalLineThickness = 4;
+        const totalLineThickness = 4; // Thicker line for total values
 
+        // Base options common to both charts
+        const chartOptionsBase = {
+            responsive: true, // Charts are responsive
+            maintainAspectRatio: false, // Allows setting height via CSS
+            animation: false, // Disable Chart.js animation for real-time data
+            plugins: {
+                legend: { // Legend configuration
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: legendColor, // Legend text color
+                        font: { size: largeFontSize } // Legend font size
+                    }
+                },
+                tooltip: {
+                    enabled: true // Enable tooltips on hover
+                }
+            },
+            elements: {
+                point: { radius: 0 }, // No data points shown on lines
+                line: { tension: 0.1 } // Slight curve to lines
+            }
+        };
 
-        const chartOptionsBase = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: true, position: 'top', labels: { color: legendColor, font: { size: largeFontSize } } }, tooltip: { enabled: true } }, elements: { point: { radius: 0 }, line: { tension: 0.1 } } }; // Tension moved to here
+        // X-axis (Time) options
+        const timeScaleOptions = {
+            type: 'linear', // Use linear scale for time
+            title: {
+                display: true,
+                text: 'Time (s)', // Axis title
+                color: titleColor, // Title color
+                font: { size: largeFontSize } // Title font size
+            },
+            min: 0, // Start time at 0
+            grid: { color: gridColor }, // Grid line color
+            ticks: {
+                color: tickColor, // Tick label color
+                font: { size: baseFontSize }, // Tick label font size
+                stepSize: 1 // Suggest tick step size
+            }
+        };
 
+        // Base Y-axis options
+        const yAxisOptions = {
+            title: {
+                display: true,
+                text: 'Value', // Default title, overridden below
+                color: titleColor,
+                font: { size: largeFontSize }
+            },
+            grid: { color: gridColor },
+            ticks: {
+                color: tickColor,
+                font: { size: baseFontSize }
+            }
+        };
 
-        const timeScaleOptions = { type: 'linear', title: { display: true, text: 'Time (s)', color: titleColor, font: { size: largeFontSize } }, min: 0, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: baseFontSize }, stepSize: 1 } };
-        const yAxisOptions = { title: { display: true, text: 'Value', color: titleColor, font: { size: largeFontSize } }, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: baseFontSize } } };
-
+        // Momentum Chart Setup
         const momentumCtx = document.getElementById('momentumChart').getContext('2d');
         momentumChart = new Chart(momentumCtx, {
             type: 'line',
             data: {
+                labels: chartData.labels, // Use time labels
                 datasets: [
-                    { label: 'P1', data: [], borderColor: colorP1, borderWidth: lineThickness }, // Individual line thickness
-                    { label: 'P2', data: [], borderColor: colorP2, borderWidth: lineThickness }, // Individual line thickness
-                    { label: 'P Total', data: [], borderColor: colorPTotal, borderWidth: totalLineThickness, borderDash: [5, 5] } // Total line thickness
+                    { label: 'P1', data: chartData.momentum.p1, borderColor: colorP1, borderWidth: lineThickness, fill: false }, // Data for momentum of body A
+                    { label: 'P2', data: chartData.momentum.p2, borderColor: colorP2, borderWidth: lineThickness, fill: false }, // Data for momentum of body B
+                    { label: 'P Total', data: chartData.momentum.pTotal, borderColor: colorPTotal, borderWidth: totalLineThickness, borderDash: [5, 5], fill: false } // Data for total momentum
                 ]
             },
             options: {
-                ...chartOptionsBase,
-                scales: { x: timeScaleOptions, y: { ...yAxisOptions, beginAtZero: false, title: { ...yAxisOptions.title, text: 'Momentum (kg m/s)'} } }
+                ...chartOptionsBase, // Apply base options
+                scales: {
+                    x: timeScaleOptions, // Apply time scale options to x-axis
+                    y: {
+                        ...yAxisOptions, // Apply base y-axis options
+                        beginAtZero: false, // Momentum can be negative
+                        title: { ...yAxisOptions.title, text: 'Momentum (kg m/s)'} // Specific y-axis title
+                    }
+                }
             }
         });
 
+        // Kinetic Energy Chart Setup
         const energyCtx = document.getElementById('energyChart').getContext('2d');
         energyChart = new Chart(energyCtx, {
             type: 'line',
             data: {
+                labels: chartData.labels, // Use time labels
                 datasets: [
-                    { label: 'KE1', data: [], borderColor: colorKE1, borderWidth: lineThickness }, // Individual line thickness
-                    { label: 'KE2', data: [], borderColor: colorKE2, borderWidth: lineThickness }, // Individual line thickness
-                    { label: 'KE Total', data: [], borderColor: colorKETotal, borderWidth: totalLineThickness, borderDash: [5, 5] } // Total line thickness
+                    { label: 'KE1', data: chartData.energy.ke1, borderColor: colorKE1, borderWidth: lineThickness, fill: false }, // Data for KE of body A
+                    { label: 'KE2', data: chartData.energy.ke2, borderColor: colorKE2, borderWidth: lineThickness, fill: false }, // Data for KE of body B
+                    { label: 'KE Total', data: chartData.energy.keTotal, borderColor: colorKETotal, borderWidth: totalLineThickness, borderDash: [5, 5], fill: false } // Data for total KE
                 ]
             },
             options: {
-                ...chartOptionsBase,
-                scales: { x: timeScaleOptions, y: { ...yAxisOptions, beginAtZero: true, title: { ...yAxisOptions.title, text: 'Kinetic Energy (J)'} } }
+                ...chartOptionsBase, // Apply base options
+                scales: {
+                    x: timeScaleOptions, // Apply time scale options to x-axis
+                    y: {
+                         ...yAxisOptions, // Apply base y-axis options
+                        beginAtZero: true, // Kinetic energy is always non-negative
+                        title: { ...yAxisOptions.title, text: 'Kinetic Energy (J)'} // Specific y-axis title
+                    }
+                }
             }
         });
 
-         mapDataToChartFormat(); // Populate with empty data
-         momentumChart.update('none'); energyChart.update('none'); // Initial render
+         // Initial update to render empty charts with axes and labels
+         mapDataToChartFormat(); // Populate with empty data initially
+         momentumChart.update('none');
+         energyChart.update('none');
     } // End setupCharts
 
     // --- Map Data to Chart Format ---
+    // Converts the raw data arrays into the format Chart.js expects for line charts ({x, y})
     function mapDataToChartFormat() {
         const mapFn = (value, index) => ({ x: parseFloat(chartData.labels[index] || 0), y: value });
+
         if (momentumChart) {
             momentumChart.data.datasets[0].data = chartData.momentum.p1.map(mapFn);
             momentumChart.data.datasets[1].data = chartData.momentum.p2.map(mapFn);
@@ -316,15 +468,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (energyChart) {
             energyChart.data.datasets[0].data = chartData.energy.ke1.map(mapFn);
             energyChart.data.datasets[1].data = chartData.energy.ke2.map(mapFn);
+            chartData.energy.keTotal.forEach((val, index) => {
+                 // Ensure KE Total is calculated correctly even if one body is null after inelastic collision
+                 const ke1 = chartData.energy.ke1[index] || 0;
+                 const ke2 = chartData.energy.ke2[index] || 0;
+                 chartData.energy.keTotal[index] = ke1 + ke2;
+            });
             energyChart.data.datasets[2].data = chartData.energy.keTotal.map(mapFn);
         }
     }
 
     // --- Update Charts ---
+    // Updates the chart data and redraws the charts
     function updateCharts(currentTime) {
          if (!momentumChart || !energyChart) return;
-         mapDataToChartFormat(); // Update data points
-         momentumChart.update('none'); energyChart.update('none'); // Redraw
+
+         mapDataToChartFormat(); // Update data points in the chart objects
+
+         // Update charts without animation
+         momentumChart.update('none');
+         energyChart.update('none');
     }
 
     // --- UI Event Listeners ---
@@ -337,42 +500,56 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Starting runner...");
             isPaused = false;
             startButton.textContent = "Pause"; // Change button text to Pause
-            engine.timing.timeScale = currentTimeScale; // Ensure correct speed
-            Runner.start(runner, engine); // Use Runner.start to begin ticks
+            // Ensure the engine's time scale is set before starting the runner
+            if (engine) engine.timing.timeScale = currentTimeScale;
+            // Start the Matter.js runner to begin the simulation ticks
+            if (runner && engine) Runner.start(runner, engine);
         } else {
             // Pause the simulation
             console.log("Pausing runner...");
             isPaused = true;
             startButton.textContent = "Start"; // Change button text to Start
-            Runner.stop(runner); // Stop the runner Ticks
+            // Stop the Matter.js runner to pause the simulation ticks
+            if (runner) Runner.stop(runner);
         }
     });
 
     // RESET BUTTON
     resetButton.addEventListener('click', () => {
         console.log("Set/Reset button clicked");
-        setupSimulation(); // Call setupSimulation to reset the simulation
-        startButton.textContent = "Start"; // Ensure Start button text is 'Start' after reset
+        // Reset the simulation and UI to the initial state
+        setupSimulation();
+        // Ensure the Start button text is 'Start' after reset
+        startButton.textContent = "Start";
     });
 
 
     // TIMESCALE SLIDER
      timeScaleSlider.addEventListener('input', (event) => {
+        // Update the current time scale based on the slider value
         currentTimeScale = parseFloat(event.target.value);
+        // Update the displayed value next to the slider
         timeScaleValueDisplay.textContent = `${currentTimeScale.toFixed(1)}x`;
-        if (engine) { // Apply immediately if engine exists
+        // Apply the new time scale to the Matter.js engine immediately
+        if (engine) {
              engine.timing.timeScale = currentTimeScale;
         }
     });
 
     // THEME TOGGLE
     themeToggleButton.addEventListener('click', () => {
+        // Toggle between 'light' and 'dark' themes
         currentTheme = (currentTheme === 'light') ? 'dark' : 'light';
+        // Save the selected theme to local storage
         localStorage.setItem('theme', currentTheme);
-        setupSimulation(); // Re-run setup to apply theme and reset (starts paused)
+        // Re-setup the simulation to apply the new theme and reset the state
+        // setupSimulation also ensures the simulation starts paused after theme change
+        setupSimulation();
     });
 
     // --- Initial Load ---
-    setupSimulation(); // Setup on load, starts paused
+    // Setup the simulation when the DOM is fully loaded.
+    // The simulation starts paused by default as per the isPaused variable initialization.
+    setupSimulation();
 
 }); // End DOMContentLoaded
