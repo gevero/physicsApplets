@@ -1,0 +1,147 @@
+:root {
+    --bg-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --pos-color: #58C4DD;
+    --vel-color: #83C167;
+    --acc-color: #FC6255;
+    --axis-color: #555555;
+    --panel-bg: #2a2a2a;
+    --btn-bg: #3c3c3c;
+    --btn-hover: #505050;
+    --btn-active: #707070;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    background-color: var(--panel-bg);
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.tools, .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+    background-color: var(--btn-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+button:hover {
+    background-color: var(--btn-hover);
+}
+
+button:active {
+    transform: scale(0.96);
+}
+
+button.active {
+    background-color: var(--btn-active);
+    color: white;
+    box-shadow: 0 0 5px var(--pos-color);
+}
+
+.panels {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.panel {
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.panel-label {
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #cccccc;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+canvas {
+    width: 100%;
+    height: 150px;
+    background-color: var(--bg-color);
+    border-radius: 4px;
+    cursor: crosshair;
+    display: block;
+    touch-action: none; /* Prevent scrolling when drawing on touch devices */
+}
+
+#canvas-anim {
+    cursor: default;
+}
+
+.animation-panel canvas {
+    height: 120px;
+}
+
+.home-link {
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.home-link a {
+    color: var(--pos-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.home-link a:hover {
+    text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+    canvas {
+        height: 200px;
+    }
+    .animation-panel canvas {
+        height: 140px;
+    }
+}

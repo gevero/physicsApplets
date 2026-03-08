@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kinematics Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="toolbar">
+            <div class="tools">
+                <button id="btn-freehand" class="active">Freehand</button>
+                <button id="btn-line">Line</button>
+                <button id="btn-quad">Quadratic</button>
+            </div>
+            <div class="controls">
+                <button id="btn-clear">Clear</button>
+                <button id="btn-play">Play</button>
+            </div>
+        </div>
+        
+        <div class="panels">
+            <div class="panel">
+                <div class="panel-label">Position x(t) [m] vs Time t [s]</div>
+                <canvas id="canvas-pos"></canvas>
+            </div>
+            <div class="panel">
+                <div class="panel-label">Velocity v(t) [m/s] vs Time t [s]</div>
+                <canvas id="canvas-vel"></canvas>
+            </div>
+            <div class="panel">
+                <div class="panel-label">Acceleration a(t) [m/s²] vs Time t [s]</div>
+                <canvas id="canvas-acc"></canvas>
+            </div>
+            <div class="panel animation-panel">
+                <div class="panel-label">Real-time Motion</div>
+                <canvas id="canvas-anim"></canvas>
+            </div>
+        </div>
+        
+        <div class="home-link">
+            <a href="../index.html">← Back to Physics Applets</a>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
