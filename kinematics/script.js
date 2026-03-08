@@ -80,6 +80,18 @@ class Chart {
             this.ctx.lineTo(x, this.height);
             this.ctx.stroke();
         }
+
+        // Draw Y-axis labels
+        this.ctx.fillStyle = '#888';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+        this.ctx.font = '12px sans-serif';
+        const numLabels = 4;
+        for(let i=0; i<=numLabels; i++) {
+            const val = this.yMin + (this.yMax - this.yMin) * (i / numLabels);
+            const y = this.valToY(val);
+            this.ctx.fillText(val.toFixed(1), 5, y === this.height ? y - 15 : y + 2);
+        }
         
         if(!this.data || this.data.length === 0) return;
         
@@ -370,6 +382,9 @@ function setMode(newMode, btn) {
 
 function updateAll() {
     computeDerivatives();
+    posChart.data = posData;
+    velChart.data = velData;
+    accChart.data = accData;
     posChart.draw();
     velChart.draw();
     accChart.draw();
@@ -439,13 +454,14 @@ function drawAnimation() {
     const aVal = accData[idx];
     
     const objX = mapX(xVal);
-    const arrowScale = 2;
+    const velArrowScale = 10;
+    const accArrowScale = 4;
     
     if(Math.abs(aVal) > 0.1) {
-        drawArrow(animCtx, objX, centerY, objX + aVal * arrowScale * 0.4, centerY, '#FC6255', 3);
+        drawArrow(animCtx, objX, centerY, objX + aVal * accArrowScale, centerY, '#FC6255', 3);
     }
     if(Math.abs(vVal) > 0.1) {
-        drawArrow(animCtx, objX, centerY, objX + vVal * arrowScale, centerY, '#83C167', 3);
+        drawArrow(animCtx, objX, centerY, objX + vVal * velArrowScale, centerY, '#83C167', 3);
     }
     
     // Draw dot with glow
