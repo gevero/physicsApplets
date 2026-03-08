@@ -25,13 +25,14 @@ let playbackTime = 0;
 let lastTime = 0;
 
 class Chart {
-    constructor(canvasId, yMin, yMax, color, labelY) {
+    constructor(canvasId, yMin, yMax, color, labelY, units) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         this.yMin = yMin;
         this.yMax = yMax;
         this.color = color;
         this.labelY = labelY;
+        this.units = units || '';
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -90,7 +91,8 @@ class Chart {
         for(let i=0; i<=numLabels; i++) {
             const val = this.yMin + (this.yMax - this.yMin) * (i / numLabels);
             const y = this.valToY(val);
-            this.ctx.fillText(val.toFixed(1), 5, y === this.height ? y - 15 : y + 2);
+            const labelText = `${val.toFixed(1)} ${this.units}`;
+            this.ctx.fillText(labelText, 5, y === this.height ? y - 15 : y + 2);
         }
         
         if(!this.data || this.data.length === 0) return;
@@ -139,13 +141,13 @@ class Chart {
 let posChart, velChart, accChart;
 
 function init() {
-    posChart = new Chart('canvas-pos', -10, 10, '#58C4DD', 'x(t)');
+    posChart = new Chart('canvas-pos', -10, 10, '#58C4DD', 'x(t)', 'm');
     posChart.data = posData;
     
-    velChart = new Chart('canvas-vel', -20, 20, '#83C167', 'v(t)');
+    velChart = new Chart('canvas-vel', -10, 10, '#83C167', 'v(t)', 'm/s');
     velChart.data = velData;
     
-    accChart = new Chart('canvas-acc', -50, 50, '#FC6255', 'a(t)');
+    accChart = new Chart('canvas-acc', -10, 10, '#FC6255', 'a(t)', 'm/s²');
     accChart.data = accData;
     
     setupPosInteraction();
@@ -203,6 +205,14 @@ function setupPosInteraction() {
             } else {
                 updateAll();
             }
+        } else if (mode === 'cubic') {
+            clicks.push({t, val});
+            if(clicks.length === 4) {
+                fitCubic(clicks[0], clicks[1], clicks[2], clicks[3]);
+                clicks = [];
+            } else {
+                updateAll();
+            }
         }
     }
 
@@ -251,6 +261,7 @@ function setupControls() {
     document.getElementById('btn-freehand').addEventListener('click', (e) => setMode('freehand', e.target));
     document.getElementById('btn-line').addEventListener('click', (e) => setMode('line', e.target));
     document.getElementById('btn-quad').addEventListener('click', (e) => setMode('quad', e.target));
+    document.getElementById('btn-cubic').addEventListener('click', (e) => setMode('cubic', e.target));
     
     document.getElementById('btn-clear').addEventListener('click', () => {
         for(let i=0; i<NUM_POINTS; i++) posData[i] = 0;
@@ -310,6 +321,70 @@ function fitQuad(p1, p2, p3) {
     updateAll();
 }
 
+function fitCubic(p1, p2, p3, p4) {
+    // Solve linear system for cubic coefficients: y = at^3 + bt^2 + ct + d
+    // Using simple Gaussian elimination/Cramer's rule for a 4x4 matrix
+    const pts = [p1, p2, p3, p4];
+    
+    // Sort points by t to prevent singular matrices if user clicked out of order
+    pts.sort((a,b) => a.t - b.t);
+    
+    // Check if points are distinct enough in t
+    for(let i=0; i<3; i++) {
+        if(Math.abs(pts[i+1].t - pts[i].t) < 1e-6) return;
+    }
+    
+    let matrix = [];
+    for(let i=0; i<4; i++) {
+        let t = pts[i].t;
+        matrix.push([t*t*t, t*t, t, 1, pts[i].val]);
+    }
+    
+    // Row reduction
+    for(let i=0; i<4; i++) {
+        // Find pivot
+        let maxEl = Math.abs(matrix[i][i]);
+        let maxRow = i;
+        for(let k=i+1; k<4; k++) {
+            if(Math.abs(matrix[k][i]) > maxEl) {
+                maxEl = Math.abs(matrix[k][i]);
+                maxRow = k;
+            }
+        }
+        
+        // Swap
+        let tmp = matrix[maxRow];
+        matrix[maxRow] = matrix[i];
+        matrix[i] = tmp;
+        
+        // Eliminate
+        for(let k=i+1; k<4; k++) {
+            let c = -matrix[k][i] / matrix[i][i];
+            for(let j=i; j<5; j++) {
+                if(i===j) matrix[k][j] = 0;
+                else matrix[k][j] += c * matrix[i][j];
+            }
+        }
+    }
+    
+    // Back substitution
+    let x = [0,0,0,0];
+    for(let i=3; i>=0; i--) {
+        x[i] = matrix[i][4] / matrix[i][i];
+        for(let k=i-1; k>=0; k--) {
+            matrix[k][4] -= matrix[k][i] * x[i];
+        }
+    }
+    
+    const [a, b, c, d] = x;
+    
+    for(let i=0; i<NUM_POINTS; i++) {
+        const t = timeData[i];
+        posData[i] = a*t*t*t + b*t*t + c*t + d;
+    }
+    updateAll();
+}
+
 function smoothPosData() {
     const passes = 8;
     const windowSize = 4; 
@@ -318,9 +393,9 @@ function smoothPosData() {
         for(let i=0; i<NUM_POINTS; i++) {
             let sum = 0, count = 0;
             for(let j=i-windowSize; j<=i+windowSize; j++) {
-                if(j>=0 && j<NUM_POINTS) {
-                    sum += posData[j]; count++;
-                }
+                let idx = Math.max(0, Math.min(NUM_POINTS - 1, j));
+                sum += posData[idx]; 
+                count++;
             }
             temp[i] = sum / count;
         }
@@ -330,45 +405,57 @@ function smoothPosData() {
 
 function computeDerivatives() {
     // Velocity
-    for(let i=0; i<NUM_POINTS; i++) {
-        if(i === 0) velData[i] = (posData[1] - posData[0]) / DT;
-        else if(i === NUM_POINTS - 1) velData[i] = (posData[i] - posData[i-1]) / DT;
-        else velData[i] = (posData[i+1] - posData[i-1]) / (2 * DT);
+    for(let i=1; i<NUM_POINTS-1; i++) {
+        velData[i] = (posData[i+1] - posData[i-1]) / (2 * DT);
     }
+    // 2nd-order forward/backward differences for edges
+    velData[0] = (-3 * posData[0] + 4 * posData[1] - posData[2]) / (2 * DT);
+    velData[NUM_POINTS-1] = (3 * posData[NUM_POINTS-1] - 4 * posData[NUM_POINTS-2] + posData[NUM_POINTS-3]) / (2 * DT);
     
-    // Smooth velocity
-    let smoothVel = [...velData];
-    for(let p=0; p<4; p++) {
-        let temp = [...smoothVel];
-        for(let i=0; i<NUM_POINTS; i++) {
-            let sum=0, count=0;
-            for(let j=i-3; j<=i+3; j++) {
-                if(j>=0 && j<NUM_POINTS){ sum+=smoothVel[j]; count++; }
+    // Smooth velocity only for freehand
+    if (mode === 'freehand') {
+        let smoothVel = [...velData];
+        for(let p=0; p<2; p++) {
+            let temp = [...smoothVel];
+            for(let i=0; i<NUM_POINTS; i++) {
+                let sum=0, count=0;
+                for(let j=i-2; j<=i+2; j++) {
+                    let idx = Math.max(0, Math.min(NUM_POINTS - 1, j));
+                    sum += smoothVel[idx]; 
+                    count++; 
+                }
+                temp[i] = sum/count;
             }
-            temp[i] = sum/count;
+            smoothVel = temp;
         }
-        smoothVel = temp;
+        velData = smoothVel;
     }
-    velData = smoothVel;
     
     // Acceleration
-    for(let i=0; i<NUM_POINTS; i++) {
-        if(i === 0) accData[i] = (smoothVel[1] - smoothVel[0]) / DT;
-        else if(i === NUM_POINTS - 1) accData[i] = (smoothVel[i] - smoothVel[i-1]) / DT;
-        else accData[i] = (smoothVel[i+1] - smoothVel[i-1]) / (2 * DT);
+    for(let i=1; i<NUM_POINTS-1; i++) {
+        accData[i] = (velData[i+1] - velData[i-1]) / (2 * DT);
     }
+    // 2nd-order forward/backward differences for edges
+    accData[0] = (-3 * velData[0] + 4 * velData[1] - velData[2]) / (2 * DT);
+    accData[NUM_POINTS-1] = (3 * velData[NUM_POINTS-1] - 4 * velData[NUM_POINTS-2] + velData[NUM_POINTS-3]) / (2 * DT);
     
-    // Smooth acceleration
-    for(let p=0; p<6; p++) {
-        let temp = [...accData];
-        for(let i=0; i<NUM_POINTS; i++) {
-            let sum=0, count=0;
-            for(let j=i-6; j<=i+6; j++){
-                if(j>=0 && j<NUM_POINTS){ sum+=accData[j]; count++; }
+    // Smooth acceleration only for freehand
+    if (mode === 'freehand') {
+        let tempAcc = [...accData];
+        for(let p=0; p<3; p++) {
+            let temp = [...tempAcc];
+            for(let i=0; i<NUM_POINTS; i++) {
+                let sum=0, count=0;
+                for(let j=i-4; j<=i+4; j++){
+                    let idx = Math.max(0, Math.min(NUM_POINTS - 1, j));
+                    sum += tempAcc[idx]; 
+                    count++; 
+                }
+                temp[i] = sum/count;
             }
-            temp[i] = sum/count;
+            tempAcc = temp;
         }
-        accData = temp;
+        accData = tempAcc;
     }
 }
 
@@ -382,6 +469,21 @@ function setMode(newMode, btn) {
 
 function updateAll() {
     computeDerivatives();
+    
+    // Auto-scale velocity
+    let maxVel = 0;
+    for(let i=0; i<NUM_POINTS; i++) maxVel = Math.max(maxVel, Math.abs(velData[i]));
+    maxVel = Math.max(1, maxVel * 1.2); 
+    velChart.yMax = maxVel;
+    velChart.yMin = -maxVel;
+
+    // Auto-scale acceleration
+    let maxAcc = 0;
+    for(let i=0; i<NUM_POINTS; i++) maxAcc = Math.max(maxAcc, Math.abs(accData[i]));
+    maxAcc = Math.max(1, maxAcc * 1.2); 
+    accChart.yMax = maxAcc;
+    accChart.yMin = -maxAcc;
+
     posChart.data = posData;
     velChart.data = velData;
     accChart.data = accData;
@@ -454,14 +556,19 @@ function drawAnimation() {
     const aVal = accData[idx];
     
     const objX = mapX(xVal);
-    const velArrowScale = 10;
-    const accArrowScale = 4;
+    const velArrowScale = 20;
+    const accArrowScale = 15;
+    const dotRadius = 8;
     
-    if(Math.abs(aVal) > 0.1) {
-        drawArrow(animCtx, objX, centerY, objX + aVal * accArrowScale, centerY, '#FC6255', 3);
+    if(Math.abs(aVal) > 0.05) {
+        const sign = Math.sign(aVal);
+        const startX = objX + sign * dotRadius;
+        drawArrow(animCtx, startX, centerY - 15, startX + aVal * accArrowScale, centerY - 15, '#FC6255', 3);
     }
-    if(Math.abs(vVal) > 0.1) {
-        drawArrow(animCtx, objX, centerY, objX + vVal * velArrowScale, centerY, '#83C167', 3);
+    if(Math.abs(vVal) > 0.05) {
+        const sign = Math.sign(vVal);
+        const startX = objX + sign * dotRadius;
+        drawArrow(animCtx, startX, centerY, startX + vVal * velArrowScale, centerY, '#83C167', 3);
     }
     
     // Draw dot with glow
